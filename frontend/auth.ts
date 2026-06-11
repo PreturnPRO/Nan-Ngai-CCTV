@@ -4,11 +4,12 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/prisma';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+	secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 	adapter: PrismaAdapter(prisma),
 	providers: [
 		Google({
-			clientId: process.env.GOOGLE_CLIENT_ID!,
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+			clientId: process.env.AUTH_GOOGLE_ID!,
+			clientSecret: process.env.AUTH_GOOGLE_SECRET!,
 		}),
 	],
 	callbacks: {

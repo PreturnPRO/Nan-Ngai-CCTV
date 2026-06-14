@@ -17,5 +17,6 @@
   "/api/incidents/logs/route": "app/api/incidents/logs/route.js",
   "/api/trafficaid/route": "app/api/trafficaid/route.js",
   "/api/users/route": "app/api/users/route.js",
+  "/auth/page": "app/auth/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js"
 }

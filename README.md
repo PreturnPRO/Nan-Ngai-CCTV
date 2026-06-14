@@ -229,3 +229,36 @@ Special thanks to [Roboflow](https://universe.roboflow.com/deteccion-h92uo/detec
 
 ## 📬 Support & Contact Information
 For any queries, feedback, or support, feel free to reach out at: **vism06@gmail.com**
+
+
+
+
+
+
+หน้าที่ 1: Accident Logs Master List (หน้ารวมรายการอุบัติเหตุ)
+ตารางนี้ดึงข้อมูลจากตาราง Incident และ CCTV เป็นหลัก:
+Log ID: ดึงจาก Incident.id
+Date & Time: ดึงจาก Incident.detectedAt
+Camera / Location: ดึงจาก CCTV.name (ผ่านความสัมพันธ์ cctvId) และ Incident.location
+Confidence: ดึงจาก Incident.confidenceScore
+Status: ดึงจาก Incident.verificationStatus
+Operator: ดึงจาก Incident.verifiedByUser.name
+สถิติด้านล่าง (System Health / Avg Response / False Positives):
+System Health: คำนวณจากจำนวนกล้องใน CCTV ที่มีสถานะ active หรือเช็ค lastPing ล่าสุด
+Average Response: คำนวณเวลาเฉลี่ยโดยนำ (Incident.verifiedAt ลบด้วย Incident.detectedAt) หรืออ่านช่วงห่างเวลาจากตาราง IncidentHistory
+False Positives (24H): นับจำนวนแถวใน Incident ที่สถานะเป็น REJECTED ภายใน 24 ชม. ล่าสุด
+
+หน้าที่ 2: Incident Log Detail & Evidence Viewer (หน้ารายละเอียดและไทม์ไลน์)
+หน้านี้ดึงข้อมูลประวัติย้อนหลังและข้อมูลวิดีโอคลิป:
+Log ID & Info: ดึงจาก Incident.id และข้อมูลกล้อง CCTV
+คลิปวิดีโอหลักฐาน: ดึงจาก CCTV.accidentVideoUrl หรือภาพนิ่งจาก Incident.imageUrl
+Temporal Analysis (ไทม์ไลน์ขวามือ): ดึงรายการจากตาราง IncidentHistory ที่เราเพิ่งเขียนระบบอัปเดตไป (ระบบจะดึงประวัติการเปลี่ยนสถานะตามเวลามาแสดงผลไล่ระดับเป็น Timeline ได้ทันที เช่น AI ตรวจเจอตอนกี่โมง -> เจ้าหน้าที่กดรับเรื่องกี่โมง -> ส่งกู้ภัยกี่โมง)
+Command Log Notes: ดึงจากฟิลด์ Incident.notes และข้อความจดบันทึกจากเจ้าหน้าที่ใน IncidentHistory.notes
+
+หน้าที่ 3: Incident Inspection & Dispatch Panel (หน้าตรวจเช็คและสั่งการส่งหน่วยกู้ภัย)
+หน้านี้ดึงข้อมูลเชิงพื้นที่ (GIS) และการตัดสินใจส่งกู้ภัย:
+กล้องวิดีโอสด: ดึงจากสตรีมสด CCTV.rtspUrl หรือจำลองการ Replay Loop จากคลิปบันทึกเหตุการณ์
+Coordinates & Map: พล็อตหมุดแผนที่ Leaflet ดึงจาก Incident.latitude และ Incident.longitude
+Closest Landmark: เขียนโปรแกรมหาระยะทางระหว่างพิกัดจุดเกิดเหตุกับพิกัดในตาราง TrafficAidPost (หน่วยกู้ภัย/ตู้ยามทางหลวงที่เราเพิ่งเพิ่มข้อมูลจำลองไป) แล้วดึงตัวที่ใกล้ที่สุดมาแสดง
+Live Queue Status: แสดงชื่อและเวลาคำนวณการเข้าถึง (ETA) ของจุดบริการกู้ภัยที่อยู่ใกล้ที่สุด
+ปุ่ม Confirm / False Alarm / Dismiss: เชื่อมต่อกับ API เพื่อบันทึกคำสั่งและสร้าง Log ลงในตาราง IncidentHistory และ NotificationLog

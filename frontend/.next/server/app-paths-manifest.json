@@ -1,22 +1,10 @@
 {
-  "/(protected)/(Incident)/Traffic_Aid/page": "app/(protected)/(Incident)/Traffic_Aid/page.js",
   "/(protected)/camera/page": "app/(protected)/camera/page.js",
-  "/(protected)/cctv_setting/page": "app/(protected)/cctv_setting/page.js",
-  "/(protected)/evidence/[id]/page": "app/(protected)/evidence/[id]/page.js",
-  "/(protected)/heatmaps/page": "app/(protected)/heatmaps/page.js",
-  "/(protected)/incident-log/page": "app/(protected)/incident-log/page.js",
   "/(protected)/incident/[id]/page": "app/(protected)/incident/[id]/page.js",
-  "/(protected)/incident/page": "app/(protected)/incident/page.js",
-  "/(protected)/new/page": "app/(protected)/new/page.js",
   "/(protected)/page": "app/(protected)/page.js",
-  "/(protected)/users/page": "app/(protected)/users/page.js",
-  "/_not-found/page": "app/_not-found/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/api/cctvs/route": "app/api/cctvs/route.js",
   "/api/incidents/[id]/route": "app/api/incidents/[id]/route.js",
-  "/api/incidents/logs/route": "app/api/incidents/logs/route.js",
-  "/api/trafficaid/route": "app/api/trafficaid/route.js",
-  "/api/users/route": "app/api/users/route.js",
-  "/auth/page": "app/auth/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js"
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/login/page": "app/login/page.js"
 }

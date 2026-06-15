@@ -197,7 +197,7 @@ var __TURBOPACK__imported__module__$5b$externals$5d2f40$prisma$2f$client__$5b$ex
 ;
 ;
 async function createIncidentFromDetection(data) {
-    return await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.create({
+    const incident = await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.create({
         data: {
             cctvId: data.cctvId,
             confidenceScore: data.confidenceScore,
@@ -206,12 +206,22 @@ async function createIncidentFromDetection(data) {
             location: data.location,
             latitude: data.latitude,
             longitude: data.longitude,
-            verificationStatus: __TURBOPACK__imported__module__$5b$externals$5d2f40$prisma$2f$client__$5b$external$5d$__$2840$prisma$2f$client$2c$__cjs$29$__["VerificationStatus"].PENDING
+            verificationStatus: __TURBOPACK__imported__module__$5b$externals$5d2f40$prisma$2f$client__$5b$external$5d$__$2840$prisma$2f$client$2c$__cjs$29$__["VerificationStatus"].PENDING,
+            detectionMetadata: data.detectionMetadata
         },
         include: {
             cctv: true
         }
     });
+    // Automatically create PENDING history log
+    await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incidentHistory.create({
+        data: {
+            incidentId: incident.id,
+            status: 'PENDING',
+            notes: `Incident detected by AI model with ${Math.round(data.confidenceScore * 100)}% confidence`
+        }
+    });
+    return incident;
 }
 async function getIncidents(filter) {
     return await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.findMany({
@@ -269,7 +279,7 @@ async function getIncidentById(id) {
     });
 }
 async function verifyIncident(id, data) {
-    return await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
+    const updatedIncident = await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
         where: {
             id
         },
@@ -294,9 +304,31 @@ async function verifyIncident(id, data) {
             }
         }
     });
+    // Create verification history log
+    await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incidentHistory.create({
+        data: {
+            incidentId: id,
+            status: data.verificationStatus,
+            changedBy: data.verifiedBy,
+            notes: data.notes || `Incident verified by user. Response needed: ${data.responseNeeded}`
+        }
+    });
+    // If response is needed, log the alert dispatch
+    if (data.responseNeeded) {
+        await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notificationLog.create({
+            data: {
+                incidentId: id,
+                channel: 'CRS_API',
+                recipient: 'http://crs-agency.gov/api/v1/alerts',
+                status: 'SUCCESS',
+                sentAt: new Date()
+            }
+        });
+    }
+    return updatedIncident;
 }
 async function initiateResponse(id, userId) {
-    return await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
+    const updatedIncident = await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
         where: {
             id
         },
@@ -304,9 +336,19 @@ async function initiateResponse(id, userId) {
             responseInitiated: true
         }
     });
+    // Create dispatch history log
+    await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incidentHistory.create({
+        data: {
+            incidentId: id,
+            status: 'DISPATCHED',
+            changedBy: userId,
+            notes: 'Emergency response team dispatched.'
+        }
+    });
+    return updatedIncident;
 }
 async function resolveIncident(id, userId, notes) {
-    return await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
+    const updatedIncident = await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incident.update({
         where: {
             id
         },
@@ -316,6 +358,16 @@ async function resolveIncident(id, userId, notes) {
             notes: notes ? `${notes}\n\nResolved on ${new Date().toLocaleString()}` : undefined
         }
     });
+    // Create resolution history log
+    await __TURBOPACK__imported__module__$5b$project$5d2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].incidentHistory.create({
+        data: {
+            incidentId: id,
+            status: 'RESOLVED',
+            changedBy: userId,
+            notes: notes || 'Incident marked as resolved.'
+        }
+    });
+    return updatedIncident;
 }
 }),
 "[project]/app/api/incidents/[id]/route.ts [app-route] (ecmascript)", ((__turbopack_context__) => {

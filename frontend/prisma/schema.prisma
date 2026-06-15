@@ -71,6 +71,8 @@ model CCTV {
   sector            String?    @default("Sector 7")
   roadSegment       String?
   landmark          String?
+  lastPing          DateTime?
+  errorMessage      String?
   createdAt         DateTime   @default(now())
   incidents         Incident[]
 
@@ -143,10 +145,42 @@ model Incident {
   resolvedAt        DateTime?
   resolvedBy        String?
   resolvedByUser    User?              @relation("ResolvedIncidents", fields: [resolvedBy], references: [id])
+  detectionMetadata Json?
+  history           IncidentHistory[]
+  notifications     NotificationLog[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@index([cctvId])
   @@index([verificationStatus])
+  @@index([detectedAt])
+  @@index([severity])
   @@map("incidents")
+}
+
+model IncidentHistory {
+  id          String   @id @default(cuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  status      String
+  changedBy   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([incidentId])
+  @@map("incident_histories")
+}
+
+model NotificationLog {
+  id          String   @id @default(cuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  channel     String   // LINE, SMS, EMAIL, CRS_API
+  recipient   String
+  status      String   // SUCCESS, FAILED, RETRYING
+  errorMsg    String?
+  sentAt      DateTime @default(now())
+
+  @@index([incidentId])
+  @@map("notification_logs")
 }

@@ -101,6 +101,21 @@ export async function getIncidentById(id: string) {
 					image: true,
 				},
 			},
+			resolvedByUser: {
+				select: {
+					id: true,
+					name: true,
+					email: true,
+					image: true,
+				},
+			},
+			// Temporal Analysis timeline (Page 2) — ordered oldest-first.
+			history: {
+				orderBy: { createdAt: 'asc' },
+			},
+			notifications: {
+				orderBy: { sentAt: 'asc' },
+			},
 		},
 	});
 }

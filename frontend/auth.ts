@@ -1,4 +1,5 @@
 import NextAuth from 'next-auth';
+import type { Adapter } from 'next-auth/adapters';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/prisma';
@@ -6,7 +7,10 @@ import bcrypt from 'bcryptjs';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
 	secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
-	adapter: PrismaAdapter(prisma),
+	// @auth/prisma-adapter pulls @auth/core 0.38 while next-auth bundles 0.41;
+	// the Adapter shapes are compatible, so cast to next-auth's expected type
+	// to bridge the duplicate-version mismatch.
+	adapter: PrismaAdapter(prisma) as Adapter,
 	session: {
 		strategy: 'jwt',
 	},
@@ -60,7 +64,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 		async jwt({ token, user }) {
 			// user is only available the first time right after sign in
 			if (user) {
-				token.id = user.id;
+				token.id = user.id as string;
 				// @ts-ignore
 				token.role = user.role;
 			}

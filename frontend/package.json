@@ -75,5 +75,8 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.22.4",
     "typescript": "^5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

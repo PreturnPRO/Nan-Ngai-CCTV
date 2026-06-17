@@ -174,6 +174,9 @@ async function dispatchLineAlert(incident: {
 		].join('\n');
 
 		const result = await sendLineText(text);
+		if (!result.ok) {
+			console.error('LINE alert not sent:', result.error);
+		}
 
 		await prisma.notificationLog.create({
 			data: {

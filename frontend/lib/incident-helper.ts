@@ -1,4 +1,5 @@
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 
 import {
 	IncidentSeverity,

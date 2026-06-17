@@ -17,6 +17,11 @@ from Nirikshan.pipeline.training_pipeline import TrainingPipeline
 from Nirikshan.logger import logging
 from pathlib import Path
 import supervision as sv
+import httpx
+
+# Base URL of the Next.js app that owns the database/API. The backend POSTs
+# detected accidents to its /api/incidents endpoint to persist them.
+FRONTEND_API_URL = os.getenv("FRONTEND_API_URL", "http://localhost:3000")
 
 app = FastAPI()
 pipeline = TrainingPipeline()
@@ -188,6 +193,46 @@ def save_accident_image(frame, connection_id: str, frame_number: int) -> Optiona
         logging.error(f"Error saving accident image: {str(e)}")
         logging.error(traceback.format_exc())
         return None
+
+async def persist_incident(meta: Dict, confidence: float, accident_type: str,
+                           location: str, image_url: Optional[str]) -> Optional[str]:
+    """Persist a detected accident to the DB via the frontend's /api/incidents
+    endpoint. Returns the created incident id, or None on skip/failure."""
+    camera_id = meta.get("camera_id")
+    if not camera_id:
+        logging.warning("No camera_id in metadata; skipping incident persistence")
+        return None
+
+    payload = {
+        "cctvId": camera_id,
+        "confidenceScore": confidence,
+        "imageUrl": image_url,
+        "location": location,
+        "latitude": meta.get("latitude"),
+        "longitude": meta.get("longitude"),
+        "detectionMetadata": {
+            "accidentType": accident_type,
+            "cameraName": meta.get("name"),
+            "source": "backend-detection",
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{FRONTEND_API_URL}/api/incidents", json=payload
+            )
+        if resp.status_code == 201:
+            incident_id = resp.json().get("id")
+            logging.info(f"Persisted incident {incident_id} for camera {camera_id}")
+            return incident_id
+        logging.error(
+            f"Failed to persist incident: {resp.status_code} {resp.text}"
+        )
+    except Exception as e:
+        logging.error(f"Error persisting incident: {str(e)}")
+    return None
+
 
 async def process_video_stream(websocket: WebSocket, video_url: str, connection_id: str):
     try:
@@ -443,7 +488,21 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                             "location": location,
                             "timestamp": datetime.now().timestamp()
                         })
-            
+
+                    incident_id = await persist_incident(
+                        cctv_metadata.get(connection_id, {}),
+                        confidence, class_name, location, image_url
+                    )
+                    if incident_id:
+                        await websocket.send_json({
+                            "type": "incident_saved",
+                            "message": f"Incident recorded: {incident_id}",
+                            "severity": "info",
+                            "incident_id": incident_id,
+                            "frame_number": frame_count,
+                            "timestamp": datetime.now().timestamp()
+                        })
+
             if in_accident_state:
                 accident_state_frames += 1
                 if accident_state_frames >= ACCIDENT_STATE_DURATION:

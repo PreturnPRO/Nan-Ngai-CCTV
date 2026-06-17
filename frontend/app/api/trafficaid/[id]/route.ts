@@ -3,13 +3,10 @@ import { prisma } from '@/prisma';
 
 export async function GET(
 	request: Request,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const id = parseInt(params.id, 10);
-		if (isNaN(id)) {
-			return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
-		}
+		const { id } = await params;
 
 		const post = await prisma.trafficAidPost.findUnique({
 			where: { id },
@@ -36,13 +33,10 @@ export async function GET(
 
 export async function PATCH(
 	request: NextRequest,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const id = parseInt(params.id, 10);
-		if (isNaN(id)) {
-			return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
-		}
+		const { id } = await params;
 
 		const data = await request.json();
 
@@ -107,13 +101,10 @@ export async function PATCH(
 
 export async function DELETE(
 	request: Request,
-	{ params }: { params: { id: string } }
+	{ params }: { params: Promise<{ id: string }> }
 ) {
 	try {
-		const id = parseInt(params.id, 10);
-		if (isNaN(id)) {
-			return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
-		}
+		const { id } = await params;
 
 		await prisma.trafficAidPost.delete({
 			where: { id },

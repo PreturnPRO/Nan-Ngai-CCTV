@@ -10,6 +10,11 @@ export type CCTV = {
 	createdAt: string;
 	accidentVideoUrl?: string;
 	hasAccidentVideo?: boolean;
+	sector?: string | null;
+	roadSegment?: string | null;
+	landmark?: string | null;
+	lastPing?: string | null;
+	errorMessage?: string | null;
 };
 
 export type CCTVStatusFilterValue = string[];

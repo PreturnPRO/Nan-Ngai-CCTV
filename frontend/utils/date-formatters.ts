@@ -1,4 +1,5 @@
-import { format, formatDistanceToNow, isValid } from 'date-fns';
+import { format, isValid } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 
 /**
  * Format a date string or object into a readable date format

@@ -4,8 +4,21 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
-import { AlertTriangle, MapPin, CheckCircle, XCircle, Trash2, Camera, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Trash2, Camera, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import dynamic from 'next/dynamic';
+
+// Leaflet needs the browser; load the map only on the client.
+const IncidentMap = dynamic(() => import('@/components/IncidentMap'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full flex justify-center items-center text-[#3E4850] text-xs font-mono">Loading map…</div>,
+});
+
+interface NearestAid {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
 
 interface CCTV {
   id: string;
@@ -33,6 +46,7 @@ export default function IncidentDetailPage() {
   const { toast } = useToast();
   
   const [incident, setIncident] = useState<Incident | null>(null);
+  const [nearest, setNearest] = useState<NearestAid | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,6 +64,15 @@ export default function IncidentDetailPage() {
       if (res.ok) {
         const data = await res.json();
         setIncident(data);
+        const lat = data.latitude ?? data.cctv?.latitude;
+        const lng = data.longitude ?? data.cctv?.longitude;
+        if (lat != null && lng != null) {
+          const aidRes = await fetch(`/api/trafficaid/nearest?lat=${lat}&lng=${lng}`);
+          if (aidRes.ok) {
+            const aid = await aidRes.json();
+            if (aid.nearest) setNearest(aid.nearest);
+          }
+        }
       } else {
         toast({ title: 'Error fetching incident', variant: 'destructive' });
       }
@@ -214,12 +237,19 @@ export default function IncidentDetailPage() {
                   </div>
                 </div>
 
-                {/* Map Placeholder */}
-                <div className="h-48 relative bg-[#0B1326] rounded border border-slate-700 overflow-hidden flex justify-center items-center shrink-0">
-                  <img src="https://placehold.co/740x190/0B1326/3E4850?text=MAP+VIEW" className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-screen" />
-                  <div className="absolute top-[40%] left-[45%] w-6 h-6 bg-orange-400/30 rounded-full flex justify-center items-center shadow-[0_0_15px_rgba(216,138,0,0.4)]">
-                    <MapPin className="w-4 h-4 text-[#FFB95F]" />
-                  </div>
+                {/* Incident map */}
+                <div className="h-48 relative bg-[#0B1326] rounded border border-slate-700 overflow-hidden shrink-0 z-0">
+                  {incident.cctv?.latitude != null && incident.cctv?.longitude != null ? (
+                    <IncidentMap
+                      latitude={incident.cctv.latitude}
+                      longitude={incident.cctv.longitude}
+                      aidPost={nearest}
+                    />
+                  ) : (
+                    <div className="h-full w-full flex justify-center items-center text-[#3E4850] text-xs font-mono">
+                      No coordinates
+                    </div>
+                  )}
                 </div>
               </div>
 

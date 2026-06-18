@@ -6,6 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { useWebSocket } from '@/hooks/use-websocket';
+import dynamic from 'next/dynamic';
+
+const IncidentMap = dynamic(() => import('@/components/IncidentMap'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full flex justify-center items-center text-[#3E4850] text-xs font-mono">Loading map…</div>,
+});
 
 const WS_URL =
   process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'ws://localhost:8000/ws/detect';
@@ -25,6 +31,8 @@ interface Cctv {
 
 interface NearestAid {
   name: string;
+  latitude: number;
+  longitude: number;
   distanceKm: number;
   etaMinutes: number;
 }
@@ -272,14 +280,18 @@ function CameraDetailContent() {
                   </div>
                 </div>
 
-                <div className="h-48 relative bg-[#0B1326] rounded border border-slate-700 overflow-hidden flex justify-center items-center shrink-0">
-                  <img
-                    src="https://placehold.co/740x190/0B1326/3E4850?text=MAP+VIEW"
-                    className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-screen"
-                  />
-                  <div className="absolute top-[40%] left-[45%] w-6 h-6 bg-orange-400/30 rounded-full flex justify-center items-center shadow-[0_0_15px_rgba(216,138,0,0.4)]">
-                    <div className="w-2 h-2 bg-[#FFB95F] rounded-full"></div>
-                  </div>
+                <div className="h-48 relative bg-[#0B1326] rounded border border-slate-700 overflow-hidden shrink-0 z-0">
+                  {cctv ? (
+                    <IncidentMap
+                      latitude={cctv.latitude}
+                      longitude={cctv.longitude}
+                      aidPost={nearest}
+                    />
+                  ) : (
+                    <div className="h-full w-full flex justify-center items-center text-[#3E4850] text-xs font-mono">
+                      Loading map…
+                    </div>
+                  )}
                 </div>
               </div>
 

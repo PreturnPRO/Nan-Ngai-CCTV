@@ -251,6 +251,7 @@ export async function initiateResponse(id: string, userId: string) {
 		where: { id },
 		data: {
 			responseInitiated: true,
+			dispatchedAt: new Date(),
 		},
 	});
 

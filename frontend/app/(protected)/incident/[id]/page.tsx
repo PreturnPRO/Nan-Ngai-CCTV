@@ -15,6 +15,7 @@ interface CCTV {
   longitude: number;
   sector: string;
   landmark: string;
+  accidentVideoUrl?: string | null;
 }
 
 interface Incident {
@@ -140,11 +141,16 @@ export default function IncidentDetailPage() {
             
             {/* Left Video Area */}
             <div className="flex-[2] relative bg-black rounded border border-slate-700 overflow-hidden flex justify-center items-center min-h-[400px]">
-              {incident.cctv?.rtspUrl && incident.cctv.rtspUrl.endsWith('.mp4') ? (
-                <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
-              ) : (
-                <img src="https://placehold.co/790x840" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen" />
-              )}
+              {(() => {
+                const clip =
+                  incident.cctv?.accidentVideoUrl ||
+                  (incident.cctv?.rtspUrl?.endsWith('.mp4') ? incident.cctv.rtspUrl : null);
+                return clip ? (
+                  <video src={clip} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
+                ) : (
+                  <div className="absolute inset-0 flex justify-center items-center text-[#3E4850] text-sm font-mono">No video clip available</div>
+                );
+              })()}
               <div className="absolute top-0 left-0 w-full h-[2px] bg-sky-200/20"></div>
               
               <div className="absolute inset-0 p-6 flex flex-col justify-between">

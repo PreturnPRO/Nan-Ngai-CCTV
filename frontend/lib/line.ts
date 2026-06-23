@@ -9,12 +9,18 @@
 const PUSH_URL = 'https://api.line.me/v2/bot/message/push';
 const BROADCAST_URL = 'https://api.line.me/v2/bot/message/broadcast';
 
+export type LineMessage =
+	| { type: 'text'; text: string }
+	| { type: 'image'; originalContentUrl: string; previewImageUrl: string };
+
 export interface LineResult {
 	ok: boolean;
 	error?: string;
 }
 
-export async function sendLineText(text: string): Promise<LineResult> {
+export async function sendLineMessages(
+	messages: LineMessage[]
+): Promise<LineResult> {
 	const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 	if (!token) {
 		return { ok: false, error: 'LINE_CHANNEL_ACCESS_TOKEN not configured' };
@@ -22,9 +28,7 @@ export async function sendLineText(text: string): Promise<LineResult> {
 
 	const target = process.env.LINE_TARGET_ID;
 	const url = target ? PUSH_URL : BROADCAST_URL;
-	const body = target
-		? { to: target, messages: [{ type: 'text', text }] }
-		: { messages: [{ type: 'text', text }] };
+	const body = target ? { to: target, messages } : { messages };
 
 	try {
 		const res = await fetch(url, {
@@ -42,4 +46,8 @@ export async function sendLineText(text: string): Promise<LineResult> {
 	} catch (err) {
 		return { ok: false, error: err instanceof Error ? err.message : String(err) };
 	}
+}
+
+export async function sendLineText(text: string): Promise<LineResult> {
+	return sendLineMessages([{ type: 'text', text }]);
 }

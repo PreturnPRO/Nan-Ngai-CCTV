@@ -5,7 +5,7 @@ import {
 	VerificationStatus,
 	Prisma,
 } from '@prisma/client';
-import { sendLineText } from '@/lib/line';
+import { sendLineMessages, type LineMessage } from '@/lib/line';
 import { haversineKm, etaMinutes } from '@/lib/geo';
 
 export async function createIncidentFromDetection(data: {
@@ -135,6 +135,7 @@ async function dispatchLineAlert(incident: {
 	detectedAt: Date;
 	incidentType: IncidentType | null;
 	severity: IncidentSeverity | null;
+	imageUrl: string | null;
 	cctv: { name: string; latitude: number; longitude: number };
 }) {
 	try {
@@ -151,29 +152,47 @@ async function dispatchLineAlert(incident: {
 				.sort((a, b) => a.dKm - b.dKm);
 			if (ranked.length) {
 				const n = ranked[0];
-				nearestLine = `${n.p.name} (${n.dKm.toFixed(1)}km, ~${etaMinutes(n.dKm)} min) ☎ ${n.p.contactNumber}`;
+				nearestLine = `${n.p.name} (${n.dKm.toFixed(1)}กม - ${etaMinutes(n.dKm)}นาที) ${n.p.contactNumber}`;
 			}
 		}
 
 		const mapLink =
 			lat != null && lng != null
-				? `https://maps.google.com/?q=${lat},${lng}`
+				? `https://www.google.com/maps?q=${lat},${lng}`
 				: 'N/A';
 
+		const when = incident.detectedAt.toLocaleString('th-TH', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: false,
+		});
+
 		const text = [
-			'🚨 ACCIDENT DISPATCH',
-			`Type: ${incident.incidentType ?? 'Unknown'}`,
-			`Severity: ${incident.severity ?? 'N/A'}`,
-			`Camera: ${incident.cctv.name}`,
-			`Location: ${incident.location ?? 'Unknown'}`,
-			`Confidence: ${Math.round(incident.confidenceScore * 100)}%`,
-			`Detected: ${incident.detectedAt.toLocaleString()}`,
-			`Nearest unit: ${nearestLine}`,
-			`Map: ${mapLink}`,
-			`Ref: ${incident.id}`,
+			'🚨 แจ้งเตือนอุบัติเหตุ',
+			`เวลาเกิดเหตุ: ${when} น.`,
+			`สถานที่: ${incident.location ?? incident.cctv.name}`,
+			`สถานที่ใกล้เคียง: ${nearestLine}`,
+			`แผนที่: ${mapLink}`,
 		].join('\n');
 
-		const result = await sendLineText(text);
+		const messages: LineMessage[] = [{ type: 'text', text }];
+
+		// Attach the accident snapshot. LINE requires a public HTTPS URL, so
+		// prefix the stored relative path with APP_BASE_URL (the deployed site).
+		const baseUrl = process.env.APP_BASE_URL;
+		if (incident.imageUrl && baseUrl?.startsWith('https://')) {
+			const imgUrl = `${baseUrl.replace(/\/$/, '')}${incident.imageUrl}`;
+			messages.push({
+				type: 'image',
+				originalContentUrl: imgUrl,
+				previewImageUrl: imgUrl,
+			});
+		}
+
+		const result = await sendLineMessages(messages);
 		if (!result.ok) {
 			console.error('LINE alert not sent:', result.error);
 		}

@@ -3,16 +3,18 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// Demo clips hosted on Cloudinary's video CDN (uploaded via
+// scripts/clips-to-cloudinary.ts) so they stream reliably on Vercel.
 const VIDEO_FILES = [
-  '/uploads/1743433880529-Merged.mp4',
-  '/uploads/1743539086934-1.mp4',
-  '/uploads/1743539245804-1.mp4',
-  '/uploads/1743539914363-1.mp4',
-  '/uploads/1743540306127-1.mp4',
-  '/uploads/1743542895262-2.mp4',
-  '/uploads/1743605495538-1.mp4',
-  '/uploads/1743610776559-Merged.mp4',
-  '/uploads/1780769530970-3.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743433880529-Merged.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743539086934-1.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743539245804-1.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743539914363-1.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743540306127-1.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743542895262-2.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743605495538-1.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1743610776559-Merged.mp4',
+  'https://res.cloudinary.com/dkz14kjpt/video/upload/demo_clips/1780769530970-3.mp4',
 ];
 
 async function main() {

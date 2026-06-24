@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { prisma } from '@/prisma';
 import {
 	getIncidentById,
 	verifyIncident,
@@ -110,10 +111,7 @@ export async function DELETE(
 		}
 
 		const { id } = await params;
-		
-		const { PrismaClient } = await import('@prisma/client');
-		const prisma = new PrismaClient();
-		
+
 		await prisma.incident.delete({
 			where: { id }
 		});

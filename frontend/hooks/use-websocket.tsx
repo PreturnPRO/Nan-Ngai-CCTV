@@ -41,6 +41,17 @@ export function useWebSocket(
 		debug = false,
 	} = options;
 
+	// Hold the callbacks in refs so an unstable (inline) callback identity
+	// doesn't rebuild `connect` and tear down/reopen the socket on every render.
+	const onOpenRef = useRef(onOpen);
+	const onMessageRef = useRef(onMessage);
+	const onCloseRef = useRef(onClose);
+	const onErrorRef = useRef(onError);
+	onOpenRef.current = onOpen;
+	onMessageRef.current = onMessage;
+	onCloseRef.current = onClose;
+	onErrorRef.current = onError;
+
 	const log = useCallback(
 		(message: string, ...args: any[]) => {
 			if (debug) {
@@ -93,27 +104,25 @@ export function useWebSocket(
 				log('Connection established');
 				setStatus('open');
 				reconnectAttemptsRef.current = 0;
-				onOpen?.(event);
+				onOpenRef.current?.(event);
 			};
 
 			socket.onmessage = event => {
 				try {
-					log('Message received', event.data);
-					console.log(event);
 					const parsedData = JSON.parse(event.data);
 					setData(parsedData);
-					onMessage?.(event);
+					onMessageRef.current?.(event);
 				} catch (err) {
 					error('Error parsing message:', err);
 					setData(event.data);
-					onMessage?.(event);
+					onMessageRef.current?.(event);
 				}
 			};
 
 			socket.onclose = event => {
 				warn(`Connection closed: code=${event.code}, reason=${event.reason}`);
 				setStatus('closed');
-				onClose?.(event);
+				onCloseRef.current?.(event);
 
 				// Don't reconnect if manually closed or max attempts reached
 				if (
@@ -138,7 +147,7 @@ export function useWebSocket(
 			socket.onerror = event => {
 				error('Connection error:', event);
 				setStatus('error');
-				onError?.(event);
+				onErrorRef.current?.(event);
 			};
 		} catch (err) {
 			error('Error creating WebSocket:', err);
@@ -146,10 +155,6 @@ export function useWebSocket(
 		}
 	}, [
 		url,
-		onOpen,
-		onMessage,
-		onClose,
-		onError,
 		reconnectOnClose,
 		reconnectInterval,
 		maxReconnectAttempts,

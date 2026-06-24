@@ -6,3 +6,5 @@ supervision
 ultralytics
 python-multipart
 httpx
+cloudinary
+python-dotenv

@@ -14,6 +14,7 @@ interface CCTV {
   id: string;
   name: string;
   rtspUrl: string;
+  accidentVideoUrl: string | null;
   latitude: number;
   longitude: number;
   sector: string;
@@ -147,12 +148,12 @@ export default function IncidentDetailPage() {
             <div className="flex-[2] relative bg-black rounded border border-slate-700 overflow-hidden flex justify-center items-center min-h-[400px]">
               {incident.videoClipUrl ? (
                 <video src={incident.videoClipUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay loop muted playsInline />
-              ) : incident.imageUrl ? (
-                <img src={incident.imageUrl} className="absolute inset-0 w-full h-full object-contain" alt="Accident Detection" />
               ) : incident.cctv?.accidentVideoUrl ? (
                 <video src={incident.cctv.accidentVideoUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
               ) : incident.cctv?.rtspUrl && incident.cctv.rtspUrl.endsWith('.mp4') ? (
                 <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
+              ) : incident.imageUrl ? (
+                <img src={incident.imageUrl} className="absolute inset-0 w-full h-full object-contain" alt="Accident Detection" />
               ) : (
                 <img src="https://placehold.co/790x840" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen" />
               )}

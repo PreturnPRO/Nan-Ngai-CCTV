@@ -40,6 +40,8 @@ interface CameraContextType {
   getDisplayTime: (id: string) => number | undefined;
   activeCameraId: string;
   setActiveCameraId: React.Dispatch<React.SetStateAction<string>>;
+  isAiEnabled: boolean;
+  setIsAiEnabled: React.Dispatch<React.SetStateAction<boolean>>;
   pendingIncidents: Incident[];
   fetchPendingIncidents: () => Promise<void>;
   wsStatus: string;
@@ -152,6 +154,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const [gridSize, setGridSize] = useState<'2x2' | '3x3' | '4x4'>('2x2');
   const [selectedCameras, setSelectedCameras] = useState<CCTV[]>([]);
   const [activeCameraId, setActiveCameraId] = useState<string>('');
+  const [isAiEnabled, setIsAiEnabled] = useState<boolean>(false);
   const [pendingIncidents, setPendingIncidents] = useState<Incident[]>([]);
   const [wsStatus, setWsStatus] = useState<string>('idle');
   const displayTimesRef = useRef<Record<string, number>>({});
@@ -230,7 +233,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   return (
     <CameraContext.Provider value={{
       cctvs, loading, gridSize, setGridSize, selectedCameras, setSelectedCameras, getMaxCameras, getDisplayTime,
-      activeCameraId, setActiveCameraId, pendingIncidents, fetchPendingIncidents, wsStatus
+      activeCameraId, setActiveCameraId, isAiEnabled, setIsAiEnabled, pendingIncidents, fetchPendingIncidents, wsStatus
     }}>
       {/* Run background processing only for the active camera on the Live Monitoring page */}
       {isLivePage && activeCamera && (

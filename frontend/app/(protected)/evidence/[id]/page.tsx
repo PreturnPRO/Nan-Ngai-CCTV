@@ -143,13 +143,13 @@ export default function EvidencePage() {
               {/* Video Player */}
               <div className="relative bg-[#171F33] rounded-lg border border-[#3E4850] shadow-[0_0_20px_rgba(137,206,255,0.15)] overflow-hidden aspect-video w-full flex flex-col justify-end">
                 {incident.videoClipUrl ? (
-                  <video src={incident.videoClipUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay loop controls playsInline />
+                  <video src={incident.videoClipUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay controls playsInline />
                 ) : incident.imageUrl ? (
                   <img src={incident.imageUrl} className="absolute inset-0 w-full h-full object-contain" alt="Accident Detection" />
                 ) : incident.cctv?.accidentVideoUrl ? (
-                  <video src={incident.cctv.accidentVideoUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay loop controls playsInline />
+                  <video src={incident.cctv.accidentVideoUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay controls playsInline />
                 ) : incident.cctv?.rtspUrl && incident.cctv.rtspUrl.endsWith('.mp4') ? (
-                  <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay loop controls playsInline />
+                  <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay controls playsInline />
                 ) : (
                   <img src="https://placehold.co/1211x636" className="absolute inset-0 w-full h-full object-cover opacity-80 mix-blend-screen" alt="Video Feed" />
                 )}

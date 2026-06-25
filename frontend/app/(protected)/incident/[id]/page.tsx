@@ -18,6 +18,7 @@ interface CCTV {
   longitude: number;
   sector: string;
   landmark: string;
+  accidentVideoUrl?: string | null;
 }
 
 interface Incident {

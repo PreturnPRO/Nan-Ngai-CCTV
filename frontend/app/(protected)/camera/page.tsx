@@ -7,6 +7,7 @@ import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { useWebSocket } from '@/hooks/use-websocket';
 import dynamic from 'next/dynamic';
+import { toast } from '@/hooks/use-toast';
 
 const MapComponent = dynamic(() => import('@/components/MapComponent'), { ssr: false });
 
@@ -90,15 +91,35 @@ function CameraDetailContent() {
         setFrame(msg.frame);
         break;
       case 'accident':
+        console.log(
+          '%c🚨 [FRONTEND WS - DETAIL] COLLISION DETECTED! 🚨',
+          'color: white; background: red; font-size: 16px; font-weight: bold; padding: 6px; border-radius: 4px;',
+          { camName: cctv?.name, camId: cctv?.id, msg }
+        );
         setAccident({ type: msg.accident_type, confidence: msg.confidence });
+        toast({
+          title: "⚠️ ACCIDENT DETECTED",
+          description: `A possible accident has been detected on ${cctv?.name || 'this camera'}.`,
+          variant: "destructive",
+        });
         break;
       case 'incident_saved':
+        console.log(
+          '%c✅ [FRONTEND WS - DETAIL] INCIDENT SAVED IN DB! ✅',
+          'color: white; background: green; font-size: 16px; font-weight: bold; padding: 6px; border-radius: 4px;',
+          { camName: cctv?.name, camId: cctv?.id, incidentId: msg.incident_id, msg }
+        );
         setAccident(prev =>
           prev ? { ...prev, incidentId: msg.incident_id } : prev
         );
+        toast({
+          title: "🚨 INCIDENT RECORDED",
+          description: `Collision registered for ${cctv?.name || 'this camera'}. Incident ID: ${msg.incident_id.slice(-6).toUpperCase()}`,
+          variant: "destructive",
+        });
         break;
     }
-  }, []);
+  }, [cctv]);
 
   const { status, send } = useWebSocket(cctv ? WS_URL : null, {
     onMessage: handleMessage,

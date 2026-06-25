@@ -138,6 +138,7 @@ async def accident_detection_websocket(websocket: WebSocket):
             
             elif data.get("type") == "process_video":
                 video_url = data.get("video_url")
+                stream_frames = data.get("stream_frames", True)
                 
                 cctv_metadata[connection_id] = {
                     "name": data.get("camera_name", "Unknown Camera"),
@@ -147,11 +148,19 @@ async def accident_detection_websocket(websocket: WebSocket):
                 }
                 
                 if video_url:
-                    await process_video_stream(websocket, video_url, connection_id)
+                    await process_video_stream(websocket, video_url, connection_id, stream_frames)
     
     except WebSocketDisconnect:
         logging.info(f"Client disconnected: {connection_id}")
     
+    except RuntimeError as e:
+        err_msg = str(e).lower()
+        if "websocket is not connected" in err_msg or "need to call \"accept\" first" in err_msg:
+            logging.info(f"Client disconnected (WebSocket not connected): {connection_id}")
+        else:
+            logging.error(f"Runtime error in WebSocket: {str(e)}")
+            logging.error(traceback.format_exc())
+            
     except Exception as e:
         logging.error(f"Error in WebSocket: {str(e)}")
         logging.error(traceback.format_exc())
@@ -295,7 +304,8 @@ async def persist_incident(meta: Dict, confidence: float, accident_type: str,
     return None
 
 
-async def process_video_stream(websocket: WebSocket, video_url: str, connection_id: str):
+async def process_video_stream(websocket: WebSocket, video_url: str, connection_id: str, stream_frames: bool = True):
+    cap = None
     try:
         frame_buffers[connection_id] = deque(maxlen=BUFFER_SIZE)
         traces[connection_id] = {}
@@ -332,6 +342,9 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
         original_fps = cap.get(cv2.CAP_PROP_FPS)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         
+        if original_fps <= 0:
+            original_fps = 30.0
+            
         target_fps = min(original_fps, 24.0)
         frame_interval = 1.0 / target_fps
         
@@ -364,7 +377,8 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
         box_annotator = sv.BoxAnnotator(thickness=2)
         
         last_tracked_detections = sv.Detections.empty()
-            
+        last_detections = sv.Detections.empty()
+        
         while True:
             if not cap.isOpened():
                 break
@@ -375,6 +389,7 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
             if not ret:
                 # Loop the video
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_count = 0
                 continue
                 
             frame_count += 1
@@ -384,7 +399,7 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                 
             frame_buffers[connection_id].append(frame.copy())
             
-            if frame_count % 3 == 0 or frame_count == 1:
+            if frame_count % 6 == 0 or frame_count == 1:
                 loop = asyncio.get_event_loop()
                 boxes, class_ids, confidences = await loop.run_in_executor(
                     None, pipeline.model_trainer.detect_objects, frame
@@ -402,30 +417,35 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                     )
                     tracked_detections = tracker.update_with_detections(detections)
                 else:
+                    detections = sv.Detections.empty()
                     tracked_detections = sv.Detections.empty()
                 last_tracked_detections = tracked_detections
+                last_detections = detections
             else:
                 tracked_detections = last_tracked_detections
+                detections = last_detections
             
             display_frame = frame.copy()
             
             accident_indices = []
             accident_detected = False
             
+            # 1. Detect accidents using raw YOLO detections (regardless of tracking status)
+            if len(detections) > 0:
+                for i in range(len(detections)):
+                    class_id = int(detections.class_id[i])
+                    confidence = float(detections.confidence[i])
+                    is_accident = class_id in ACCIDENT_CLASS_IDS
+                    if is_accident and confidence >= pipeline.CONFIDENCE_THRESHOLD:
+                        accident_indices.append(i)
+                        accident_detected = True
+
+            # 2. Update traces and tracks for vehicles in tracked_detections
             if len(tracked_detections) > 0:
                 for i in range(len(tracked_detections)):
                     track_id = tracked_detections.tracker_id[i]
                     if track_id is None:
                         continue
-                        
-                    class_id = int(tracked_detections.class_id[i])
-                    confidence = float(tracked_detections.confidence[i])
-                    
-                    is_accident = class_id in ACCIDENT_CLASS_IDS
-                            
-                    if is_accident and confidence >= pipeline.CONFIDENCE_THRESHOLD:
-                        accident_indices.append(i)
-                        accident_detected = True
                     
                     if track_id not in traces[connection_id]:
                         traces[connection_id][track_id] = deque(maxlen=MAX_TRACE_POINTS)
@@ -478,6 +498,15 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                     scene=display_frame,
                     detections=non_vehicle_detections)
             
+            # Highlight raw accident detections on the frame
+            if len(detections) > 0:
+                accident_mask = [int(cid) in ACCIDENT_CLASS_IDS for cid in detections.class_id]
+                raw_accident_detections = detections[accident_mask]
+                if len(raw_accident_detections) > 0:
+                    box_annotator.annotate(
+                        scene=display_frame,
+                        detections=raw_accident_detections)
+            
             for track_id, trace_points in traces[connection_id].items():
                 if len(trace_points) < 2:
                     continue
@@ -524,8 +553,8 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                 
                 if accident_indices:
                     i = accident_indices[0]
-                    confidence = float(tracked_detections.confidence[i])
-                    class_id = int(tracked_detections.class_id[i])
+                    confidence = float(detections.confidence[i])
+                    class_id = int(detections.class_id[i])
                     class_name = CLASS_NAMES.get(class_id, "Unknown")
                     
                     detected_accident_type = class_name
@@ -603,18 +632,28 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                     ))
                     del active_recordings[connection_id]
             
-            _, buffer = cv2.imencode('.jpg', display_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            encoded_frame = base64.b64encode(buffer).decode('utf-8')
-            
-            await websocket.send_json({
-                "type": "frame",
-                "frame": encoded_frame,
-                "frame_number": frame_count,
-                "timestamp": datetime.now().timestamp(),
-                "display_time": (frame_count % total_frames) / original_fps if total_frames > 0 else 0,
-                "total_frames": total_frames,
-                "progress": frame_count / total_frames if total_frames > 0 else 0
-            })
+            if stream_frames:
+                _, buffer = cv2.imencode('.jpg', display_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                encoded_frame = base64.b64encode(buffer).decode('utf-8')
+                
+                await websocket.send_json({
+                    "type": "frame",
+                    "frame": encoded_frame,
+                    "frame_number": frame_count,
+                    "timestamp": datetime.now().timestamp(),
+                    "display_time": (frame_count % total_frames) / original_fps if total_frames > 0 else 0,
+                    "total_frames": total_frames,
+                    "progress": frame_count / total_frames if total_frames > 0 else 0
+                })
+            else:
+                await websocket.send_json({
+                    "type": "frame",
+                    "frame_number": frame_count,
+                    "timestamp": datetime.now().timestamp(),
+                    "display_time": (frame_count % total_frames) / original_fps if total_frames > 0 else 0,
+                    "total_frames": total_frames,
+                    "progress": frame_count / total_frames if total_frames > 0 else 0
+                })
         
             if frame_count % 30 == 0:
                 await websocket.send_json({
@@ -639,8 +678,6 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
             await asyncio.sleep(sleep_time)
             last_frame_time = asyncio.get_event_loop().time()
 
-        cap.release()
-        
         location = "Unknown location"
         meta = cctv_metadata.get(connection_id, {})
         if meta.get("latitude") is not None and meta.get("longitude") is not None:
@@ -656,14 +693,27 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
             "timestamp": datetime.now().timestamp()
         })
             
+    except WebSocketDisconnect:
+        logging.info(f"WebSocket disconnected during video processing for connection {connection_id}")
     except Exception as e:
-        logging.error(f"Error processing video: {str(e)}")
-        logging.error(traceback.format_exc())
-        await websocket.send_json({
-            "type": "error",
-            "message": f"Error processing video: {str(e)}",
-            "severity": "error"
-        })
+        err_msg = str(e).lower()
+        if "websocket is not connected" in err_msg or "connection closed" in err_msg:
+            logging.info(f"WebSocket closed during video processing for connection {connection_id}")
+        else:
+            logging.error(f"Error processing video: {str(e)}")
+            logging.error(traceback.format_exc())
+            try:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Error processing video: {str(e)}",
+                    "severity": "error"
+                })
+            except Exception:
+                pass
+    finally:
+        if cap is not None:
+            cap.release()
+            logging.info(f"Released video capture for connection {connection_id}")
 
 def base64_to_image(base64_string):
     if "base64," in base64_string:

@@ -387,10 +387,7 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
             
             ret, frame = cap.read()
             if not ret:
-                # Loop the video
-                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                frame_count = 0
-                continue
+                break
                 
             frame_count += 1
             

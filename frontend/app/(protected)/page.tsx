@@ -48,7 +48,11 @@ export default function LiveMonitoringPage() {
     setGridSize,
     selectedCameras,
     setSelectedCameras,
-    getMaxCameras
+    getMaxCameras,
+    isAiEnabled,
+    setIsAiEnabled,
+    activeCameraId,
+    setActiveCameraId
   } = useCamera();
   
   const [showSwapFor, setShowSwapFor] = useState<number | null>(null);
@@ -120,19 +124,62 @@ export default function LiveMonitoringPage() {
               <h1 className="text-[#DAE2FD] text-2xl font-semibold">Live Video Streams</h1>
             </div>
 
-            <div className="flex items-center gap-4">
-              <span className="text-[#BEC8D2] text-xs font-mono font-medium tracking-wide">
-                Grid Matrix:
-              </span>
-              <select
-                value={gridSize}
-                onChange={handleGridChange}
-                className="bg-[#222A3D] text-[#DAE2FD] text-sm border border-[#3E4850] rounded px-3 py-1 outline-none focus:border-[#89CEFF]"
-              >
-                <option value="2x2">2x2 View (4 Cameras)</option>
-                <option value="3x3">3x3 View (9 Cameras)</option>
-                <option value="4x4">4x4 View (16 Cameras)</option>
-              </select>
+            <div className="flex items-center gap-6">
+              {/* AI Detection Controls */}
+              <div className="flex items-center gap-3 bg-[#131B2E] px-4 py-1.5 rounded-lg border border-[#3E4850]">
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center gap-2 border-r border-[#3E4850] pr-3">
+                  <span className="text-[#BEC8D2] text-xs font-mono font-medium tracking-wide">
+                    AI Detection:
+                  </span>
+                  <button
+                    onClick={() => setIsAiEnabled(!isAiEnabled)}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isAiEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isAiEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                  <span className={`text-xs font-semibold font-mono w-6 text-left ${isAiEnabled ? 'text-emerald-400' : 'text-slate-400'}`}>
+                    {isAiEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+
+                {/* Camera Selector for AI */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[#BEC8D2] text-xs font-mono font-medium tracking-wide">
+                    AI Target:
+                  </span>
+                  <select
+                    disabled={!isAiEnabled}
+                    value={activeCameraId}
+                    onChange={(e) => setActiveCameraId(e.target.value)}
+                    className="bg-[#222A3D] text-[#DAE2FD] text-xs border border-[#3E4850] rounded px-2 py-0.5 outline-none focus:border-[#89CEFF] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    {cctvs.map((cam) => (
+                      <option key={cam.id} value={cam.id}>
+                        {cam.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Grid Matrix Selector */}
+              <div className="flex items-center gap-3">
+                <span className="text-[#BEC8D2] text-xs font-mono font-medium tracking-wide">
+                  Grid Matrix:
+                </span>
+                <select
+                  value={gridSize}
+                  onChange={handleGridChange}
+                  className="bg-[#222A3D] text-[#DAE2FD] text-sm border border-[#3E4850] rounded px-3 py-1 outline-none focus:border-[#89CEFF]"
+                >
+                  <option value="2x2">2x2 View (4 Cameras)</option>
+                  <option value="3x3">3x3 View (9 Cameras)</option>
+                  <option value="4x4">4x4 View (16 Cameras)</option>
+                </select>
+              </div>
             </div>
           </header>
 
@@ -256,7 +303,7 @@ export default function LiveMonitoringPage() {
                   <div className="text-center text-[#BEC8D2] text-sm py-10 opacity-60">No pending alerts.</div>
                 ) : (
                   pendingIncidents.map(inc => (
-                    <div key={inc.id} className="p-3 bg-[#222A3D] border border-red-500/30 rounded flex flex-col gap-2 relative overflow-hidden group">
+                    <div key={inc.id} className="p-3 bg-[#222A3D] border border-red-500/30 rounded flex flex-col gap-2 relative overflow-hidden group shrink-0">
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>
                       <div className="flex justify-between items-start pl-1">
                         <span className="text-red-400 text-[10px] font-bold uppercase tracking-wider">DETECTED ALERT</span>

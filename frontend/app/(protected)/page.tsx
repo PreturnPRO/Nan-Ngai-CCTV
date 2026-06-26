@@ -45,7 +45,6 @@ export default function LiveMonitoringPage() {
     cctvs,
     loading,
     gridSize,
-    setGridSize,
     selectedCameras,
     setSelectedCameras,
     getMaxCameras
@@ -85,11 +84,6 @@ export default function LiveMonitoringPage() {
 
   const displayedCameras = selectedCameras.slice(0, getMaxCameras());
 
-  const handleGridChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSize = e.target.value as '2x2' | '3x3' | '4x4';
-    setGridSize(newSize);
-  };
-
   const handleCameraSwap = (slotIndex: number, newCameraId: string) => {
     const newCamera = cctvs.find(c => c.id === newCameraId);
     if (!newCamera) return;
@@ -124,15 +118,9 @@ export default function LiveMonitoringPage() {
               <span className="text-[#BEC8D2] text-xs font-mono font-medium tracking-wide">
                 Grid Matrix:
               </span>
-              <select
-                value={gridSize}
-                onChange={handleGridChange}
-                className="bg-[#222A3D] text-[#DAE2FD] text-sm border border-[#3E4850] rounded px-3 py-1 outline-none focus:border-[#89CEFF]"
-              >
-                <option value="2x2">2x2 View (4 Cameras)</option>
-                <option value="3x3">3x3 View (9 Cameras)</option>
-                <option value="4x4">4x4 View (16 Cameras)</option>
-              </select>
+              <span className="bg-[#222A3D] text-[#DAE2FD] text-sm border border-[#3E4850] rounded px-3 py-1 font-medium select-none">
+                2x2 View (4 Cameras)
+              </span>
             </div>
           </header>
 

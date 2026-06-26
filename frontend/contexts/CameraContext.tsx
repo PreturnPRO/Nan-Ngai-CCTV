@@ -232,36 +232,6 @@ export function CameraProvider({ children }: { children: ReactNode }) {
       cctvs, loading, gridSize, setGridSize, selectedCameras, setSelectedCameras, getMaxCameras, getDisplayTime,
       activeCameraId, setActiveCameraId, pendingIncidents, fetchPendingIncidents, wsStatus
     }}>
-      {/* Run background processing only for the active camera on the Live Monitoring page */}
-      {isLivePage && activeCamera && (
-        <BackgroundCameraProcessor 
-          key={`bg-${activeCamera.id}`} 
-          cam={activeCamera} 
-          setDisplayTime={setDisplayTime} 
-          setWsStatus={setWsStatus}
-          onAccidentDetected={() => {
-            console.log(`[CameraContext onAccidentDetected] Setting active alert for Cam: ${activeCamera.name}`);
-            setCctvs(prev => prev.map(c => c.id === activeCamera.id ? { ...c, hasActiveAlert: true } : c));
-            toast({
-              title: "⚠️ ACCIDENT DETECTED",
-              description: `A possible accident has been detected on ${activeCamera.name}.`,
-              variant: "destructive",
-            });
-          }}
-          onIncidentSaved={(incidentId) => {
-            console.log(`[CameraContext onIncidentSaved] Saved incident ID: ${incidentId} for Cam: ${activeCamera.name}`);
-            setCctvs(prev => prev.map(c => c.id === activeCamera.id ? { ...c, hasActiveAlert: true, activeIncidentId: incidentId } : c));
-            fetchCCTVs();
-            fetchPendingIncidents();
-            toast({
-              title: "🚨 INCIDENT RECORDED",
-              description: `Collision registered for ${activeCamera.name}. Incident ID: ${incidentId.slice(-6).toUpperCase()}`,
-              variant: "destructive",
-            });
-          }}
-        />
-      )}
-      
       {children}
     </CameraContext.Provider>
   );

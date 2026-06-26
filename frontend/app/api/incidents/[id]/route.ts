@@ -8,6 +8,8 @@ import {
 } from '../../../../services/incidentServices';
 import { VerificationStatus } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
 	req: Request,
 	{ params }: { params: Promise<{ id: string }> }

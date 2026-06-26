@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
 	try {
+		console.log('[API CCTVs GET] Fetching CCTVs from DB...');
 		const cctvs = await prisma.cCTV.findMany({
 			orderBy: { createdAt: 'desc' },
 			include: {
@@ -95,6 +96,7 @@ export async function GET() {
 			createdAt: cctv.createdAt.toISOString(),
 		}));
 
+		console.log(`[API CCTVs GET] Formatted ${formattedCctvs.length} CCTVs`);
 		return NextResponse.json(formattedCctvs);
 	} catch (error) {
 		console.error('Error fetching CCTVs:', error);

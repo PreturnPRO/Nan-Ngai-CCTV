@@ -18,7 +18,7 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-full pt-20 pb-8 bg-[#131B2E] border-r border-[#3E4850] flex flex-col justify-between shrink-0 z-20 relative">
+    <aside className="w-64 h-full pt-4 pb-8 bg-[#131B2E] border-r border-[#3E4850] flex flex-col justify-between shrink-0 z-20 relative">
       <div className="px-6 pb-10 flex flex-col">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-sky-500 rounded-md flex justify-center items-center">

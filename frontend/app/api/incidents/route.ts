@@ -10,12 +10,15 @@ import { VerificationStatus } from '@prisma/client';
 export async function GET(req: Request) {
 	try {
 		const session = await auth();
+		console.log('[API Incidents GET] Session:', session?.user ? `User: ${session.user.email}` : 'No Session');
 		if (!session || !session.user) {
+			console.log('[API Incidents GET] Returning 401 Unauthorized');
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
 		const url = new URL(req.url);
 		const status = url.searchParams.get('status');
+		console.log('[API Incidents GET] Fetching with status parameter:', status);
 		const limit = url.searchParams.get('limit')
 			? parseInt(url.searchParams.get('limit')!)
 			: undefined;

@@ -65,6 +65,17 @@ export default {
     			lg: 'var(--radius)',
     			md: 'calc(var(--radius) - 2px)',
     			sm: 'calc(var(--radius) - 4px)'
+    		},
+    		keyframes: {
+    			shake: {
+    				'0%, 100%': { transform: 'translateX(0)' },
+    				'10%, 14%, 18%': { transform: 'translateX(-4px)' },
+    				'12%, 16%, 20%': { transform: 'translateX(4px)' },
+                    '22%, 99%': { transform: 'translateX(0)' }
+    			}
+    		},
+    		animation: {
+    			shake: 'shake 1s infinite'
     		}
     	}
     },

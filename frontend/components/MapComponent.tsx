@@ -21,19 +21,21 @@ interface MapComponentProps {
 	initialZoom?: number;
 }
 
+const LocationMarker = ({ onLocationSelect }: { onLocationSelect?: (latlng: { lat: number; lng: number }) => void }) => {
+	useMapEvents({
+		click(e) {
+			onLocationSelect?.(e.latlng);
+		},
+	});
+	return null;
+};
 const MapComponent: React.FC<MapComponentProps> = ({
 	onLocationSelect,
 	marker,
 	heatspots,
+	interactive,
+	initialZoom,
 }) => {
-	const LocationMarker = () => {
-		useMapEvents({
-			click(e) {
-				onLocationSelect?.(e.latlng);
-			},
-		});
-		return null;
-	};
 
 	const [isMounted, setIsMounted] = useState(false);
 
@@ -48,7 +50,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const centerPos: [number, number] = marker ? [marker.latitude, marker.longitude] : (heatspots && heatspots.length > 0 ? [heatspots[0].latitude, heatspots[0].longitude] : [13.736717, 100.523186]);
 
 	return (
-		<MapContainer center={centerPos} zoom={15} className='h-full w-full relative z-0'>
+		<MapContainer 
+			center={centerPos} 
+			zoom={initialZoom || 15} 
+			className='h-full w-full relative z-0'
+			dragging={interactive !== false}
+			zoomControl={interactive !== false}
+			scrollWheelZoom={interactive !== false}
+			doubleClickZoom={interactive !== false}
+			touchZoom={interactive !== false}
+		>
 			<TileLayer url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png' />
 			{marker && <Marker position={[marker.latitude, marker.longitude]} />}
             {heatspots && heatspots.map((hs, i) => {
@@ -67,7 +78,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     />
                 );
             })}
-			<LocationMarker />
+			<LocationMarker onLocationSelect={onLocationSelect} />
 		</MapContainer>
 	);
 };

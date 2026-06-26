@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
 import dynamic from 'next/dynamic';
+import { ArrowLeft } from 'lucide-react';
 
 const MapComponent = dynamic(() => import('@/components/MapComponent'), { ssr: false });
 import { AlertTriangle, MapPin, CheckCircle, XCircle, Trash2, Camera, ShieldAlert } from 'lucide-react';
@@ -18,6 +19,7 @@ interface CCTV {
   longitude: number;
   sector: string;
   landmark: string;
+  accidentVideoUrl?: string | null;
 }
 
 interface Incident {
@@ -48,9 +50,19 @@ export default function IncidentDetailPage() {
     }
   }, [id]);
 
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (incident && !incident.videoClipUrl) {
+      interval = setInterval(() => {
+        fetchIncident();
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [incident, id]);
+
   const fetchIncident = async () => {
     try {
-      const res = await fetch(`/api/incidents/${id}`);
+      const res = await fetch(`/api/incidents/${id}?t=${Date.now()}`);
       if (res.ok) {
         const data = await res.json();
         setIncident(data);
@@ -130,14 +142,10 @@ export default function IncidentDetailPage() {
 
         <div className="w-full max-w-[1920px] mx-auto px-8 pt-[88px] pb-6 flex flex-col gap-4 h-full overflow-hidden">
 
-          <div className="flex justify-between items-center pb-2 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[#BEC8D2] text-sm">Monitor</span>
-              <div className="w-1.5 h-2 bg-[#3E4850]"></div>
-              <span className="text-[#89CEFF] text-sm font-semibold">Incident Detail</span>
-            </div>
-            <Link href="/" className="px-4 py-2 bg-[#222A3D] rounded border border-slate-700 flex items-center gap-2 hover:bg-slate-800 transition-colors">
-              <span className="text-[#DAE2FD] text-sm">&larr; Back to Monitor</span>
+          <div className="flex flex-col gap-4 shrink-0">
+            <Link href="/" className="flex items-center gap-2 w-fit group">
+              <ArrowLeft className="w-4 h-4 text-[#89CEFF] group-hover:text-white transition-colors" />
+              <span className="text-[#89CEFF] text-xs font-mono font-medium tracking-wide group-hover:text-white transition-colors">Back to Monitor</span>
             </Link>
           </div>
 
@@ -146,15 +154,18 @@ export default function IncidentDetailPage() {
             {/* Left Video Area */}
             <div className="flex-[2] relative bg-black rounded border border-slate-700 overflow-hidden flex justify-center items-center min-h-[400px]">
               {incident.videoClipUrl ? (
-                <video src={incident.videoClipUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay loop muted playsInline />
+                <video src={incident.videoClipUrl} className="absolute inset-0 w-full h-full object-contain" autoPlay muted controls playsInline loop />
               ) : incident.imageUrl ? (
                 <img src={incident.imageUrl} className="absolute inset-0 w-full h-full object-contain" alt="Accident Detection" />
               ) : incident.cctv?.accidentVideoUrl ? (
-                <video src={incident.cctv.accidentVideoUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
+                <video src={incident.cctv.accidentVideoUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay muted loop playsInline />
               ) : incident.cctv?.rtspUrl && incident.cctv.rtspUrl.endsWith('.mp4') ? (
-                <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
+                <video src={incident.cctv.rtspUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay muted loop playsInline />
               ) : (
-                <img src="https://placehold.co/790x840" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-screen" />
+                <div className="absolute inset-0 w-full h-full bg-[#131B2E] flex flex-col justify-center items-center gap-4 opacity-60 mix-blend-screen">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#3E4850]"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" /><rect x="2" y="6" width="14" height="12" rx="2" /></svg>
+                  <span className="text-[#3E4850] text-sm font-mono tracking-widest">VIDEO FEED UNAVAILABLE</span>
+                </div>
               )}
               <div className="absolute top-0 left-0 w-full h-[2px] bg-sky-200/20"></div>
 
@@ -168,11 +179,6 @@ export default function IncidentDetailPage() {
                     <span className="text-[#DAE2FD] text-sm font-mono mt-1">REC {incident.id.slice(-6).toUpperCase()} // CAM_ID: {incident.cctv?.id.slice(-4) || 'UNK'}</span>
                   </div>
 
-                  <div className="w-[210px] p-3 bg-[#0B1326]/80 rounded border border-orange-300/50 shadow-[0_0_15px_rgba(216,138,0,0.4)] backdrop-blur-md flex flex-col gap-1">
-                    <span className="text-[#FFB95F] text-[11px] font-mono leading-none flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> DETECTION STATUS</span>
-                    <span className="text-[#DAE2FD] text-lg font-semibold leading-tight mt-1">{incident.incidentType?.replace('_', ' ') || 'AI Accident Detected'}</span>
-                    <span className="text-[#BEC8D2] text-sm leading-none mt-1">10s Replay Loop active</span>
-                  </div>
                 </div>
 
                 <div className="flex justify-between items-end">

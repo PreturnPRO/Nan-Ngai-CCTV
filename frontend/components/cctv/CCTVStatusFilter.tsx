@@ -1,3 +1,4 @@
+import { CCTV } from './types';
 import * as React from 'react';
 import { Table } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,6 @@ import {
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, Filter } from 'lucide-react';
-import { CCTV, CCTVStatusFilterValue } from './types';
 
 interface CCTVStatusFilterProps {
 	table: Table<CCTV>;

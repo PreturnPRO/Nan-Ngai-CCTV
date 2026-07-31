@@ -18,25 +18,38 @@ from Nirikshan.logger import logging
 from pathlib import Path
 import supervision as sv
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()  # read backend/.env into the environment
 
 # Base URL of the Next.js app that owns the database/API. The backend POSTs
 # detected accidents to its /api/incidents endpoint to persist them.
 FRONTEND_API_URL = os.getenv("FRONTEND_API_URL", "http://localhost:3000")
 
+# Optional Cloudinary upload so accident snapshots get a public HTTPS URL that
+# works from anywhere (LINE alerts, the deployed web app) instead of a local
+# path. Configure via CLOUDINARY_URL (cloudinary://key:secret@cloud_name).
+CLOUDINARY_ENABLED = bool(os.getenv("CLOUDINARY_URL"))
+if CLOUDINARY_ENABLED:
+    import cloudinary
+    import cloudinary.uploader
+    cloudinary.config(secure=True)  # reads CLOUDINARY_URL from the environment
+
 app = FastAPI()
 pipeline = TrainingPipeline()
 
+# Local staging only: snapshots/clips are written here so Cloudinary has a file
+# path to upload from. Media is served from Cloudinary, so nothing is copied
+# into the frontend's public/ anymore (that also broke inside Docker).
 ACCIDENT_IMAGES_DIR = Path("accident_images")
 ACCIDENT_IMAGES_DIR.mkdir(exist_ok=True)
-
-PUBLIC_IMAGES_DIR = Path("../frontend/public/accident_images")
-PUBLIC_IMAGES_DIR.mkdir(exist_ok=True, parents=True)
 
 ACCIDENT_VIDEOS_DIR = Path("accident_videos")
 ACCIDENT_VIDEOS_DIR.mkdir(exist_ok=True)
 
-PUBLIC_VIDEOS_DIR = Path("../frontend/public/accident_videos")
-PUBLIC_VIDEOS_DIR.mkdir(exist_ok=True, parents=True)
+# After a successful Cloudinary upload the local staging file is deleted so
+# disk doesn't grow unbounded. Set KEEP_LOCAL_MEDIA=1 to keep them (debugging).
+KEEP_LOCAL_MEDIA = os.getenv("KEEP_LOCAL_MEDIA", "").lower() in ("1", "true", "yes")
 
 app.mount("/accident_images", StaticFiles(directory=str(ACCIDENT_IMAGES_DIR)), name="accident_images")
 app.mount("/accident_videos", StaticFiles(directory=str(ACCIDENT_VIDEOS_DIR)), name="accident_videos")
@@ -91,9 +104,9 @@ def format_location(latitude: float, longitude: float) -> str:
 async def health_check():
     """Health check endpoint"""
     return {
-        "status": "ok", 
-        "images_dir": str(ACCIDENT_IMAGES_DIR), 
-        "public_dir": str(PUBLIC_IMAGES_DIR)
+        "status": "ok",
+        "images_dir": str(ACCIDENT_IMAGES_DIR),
+        "videos_dir": str(ACCIDENT_VIDEOS_DIR),
     }
 
 @app.get("/images")
@@ -192,26 +205,70 @@ def save_accident_image(frame, connection_id: str, frame_number: int) -> Optiona
         filename = f"accident_{timestamp}_{unique_id}.jpg"
         
         backend_path = ACCIDENT_IMAGES_DIR / filename
-        public_path = PUBLIC_IMAGES_DIR / filename
-        
+
         cv2.imwrite(str(backend_path), frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
-        
+
         if not backend_path.exists() or backend_path.stat().st_size == 0:
             logging.error(f"Failed to create valid image file at {backend_path}")
             return None
-        
-        try:
-            import shutil
-            shutil.copy2(str(backend_path), str(public_path))
-            logging.info(f"Copied image to public directory: {public_path}")
-        except Exception as e:
-            logging.error(f"Failed to copy to public directory: {str(e)}")
 
+        # Return the local path immediately — the Cloudinary upload is done in
+        # the background (see upload_image_and_update) so persisting the
+        # incident isn't blocked behind a network round-trip.
         return f"/accident_images/{filename}"
         
     except Exception as e:
         logging.error(f"Error saving accident image: {str(e)}")
         logging.error(traceback.format_exc())
+        return None
+
+
+async def upload_image_and_update(image_url: Optional[str], incident_id: str):
+    """Background task: upload the saved snapshot to Cloudinary and patch the
+    incident's imageUrl. Runs after the incident is already persisted so the
+    UI isn't blocked waiting on the upload."""
+    if not CLOUDINARY_ENABLED or not image_url or image_url.startswith("http"):
+        return
+
+    filename = Path(image_url).name
+    backend_path = ACCIDENT_IMAGES_DIR / filename
+    if not backend_path.exists():
+        return
+
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: cloudinary.uploader.upload(
+                str(backend_path),
+                folder="accidents",
+                public_id=Path(filename).stem,
+            ),
+        )
+        secure_url = result["secure_url"]
+        logging.info(f"Uploaded image to Cloudinary: {secure_url}")
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"{FRONTEND_API_URL}/api/incidents",
+                json={"action": "updateImage", "id": incident_id, "imageUrl": secure_url},
+            )
+        if resp.status_code == 200:
+            logging.info(f"Updated incident {incident_id} with Cloudinary image")
+        else:
+            logging.error(f"Failed to update incident image: {resp.status_code} {resp.text}")
+
+        # Cloudinary now holds the canonical copy — drop the local staging file
+        # so disk doesn't grow unbounded (matters most on small cloud volumes).
+        if KEEP_LOCAL_MEDIA:
+            return
+        try:
+            backend_path.unlink()
+            logging.info(f"Removed local staging image: {backend_path.name}")
+        except Exception as e:
+            logging.warning(f"Could not remove local image {backend_path.name}: {e}")
+    except Exception as e:
+        logging.error(f"Background image upload failed: {str(e)}")
         return None
 
 async def save_accident_video(frames: List[np.ndarray], fps: float, width: int, height: int, incident_id: str, websocket: WebSocket):
@@ -222,27 +279,43 @@ async def save_accident_video(frames: List[np.ndarray], fps: float, width: int, 
         filename = f"accident_{timestamp}_{incident_id}.mp4"
         
         backend_path = ACCIDENT_VIDEOS_DIR / filename
-        public_path = PUBLIC_VIDEOS_DIR / filename
-        
+
         def _write_and_copy():
             fourcc = cv2.VideoWriter_fourcc(*'avc1')
             out = cv2.VideoWriter(str(backend_path), fourcc, fps, (width, height))
             for f in frames:
                 out.write(f)
             out.release()
-            
-            try:
-                import shutil
-                shutil.copy2(str(backend_path), str(public_path))
-                logging.info(f"Copied video to public directory: {public_path}")
-            except Exception as e:
-                logging.error(f"Failed to copy video to public directory: {str(e)}")
 
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, _write_and_copy)
 
         video_url = f"/accident_videos/{filename}"
-        
+
+        # Prefer a public Cloudinary URL so the clip plays from the deployed
+        # web app; fall back to the local path if upload fails / not configured.
+        if CLOUDINARY_ENABLED:
+            try:
+                result = cloudinary.uploader.upload(
+                    str(backend_path),
+                    resource_type="video",
+                    folder="accident_videos",
+                    public_id=Path(filename).stem,
+                )
+                video_url = result["secure_url"]
+                logging.info(f"Uploaded video to Cloudinary: {video_url}")
+
+                # Cloudinary has the clip now — drop the local staging file.
+                # Clips are the big ones (~2MB each), so this matters.
+                if not KEEP_LOCAL_MEDIA:
+                    try:
+                        backend_path.unlink()
+                        logging.info(f"Removed local staging video: {filename}")
+                    except Exception as e:
+                        logging.warning(f"Could not remove local video {filename}: {e}")
+            except Exception as e:
+                logging.error(f"Cloudinary video upload failed: {str(e)}")
+
         payload = {
             "action": "updateVideo",
             "id": incident_id,
@@ -632,6 +705,11 @@ async def process_video_stream(websocket: WebSocket, video_url: str, connection_
                             "frames": list(frame_buffers[connection_id]),
                             "post_frames_left": post_accident_frames
                         }
+                        # Upload the snapshot to Cloudinary in the background and
+                        # patch the incident afterwards — keeps the alert instant.
+                        asyncio.create_task(
+                            upload_image_and_update(image_url, incident_id)
+                        )
 
             if in_accident_state:
                 accident_state_frames += 1

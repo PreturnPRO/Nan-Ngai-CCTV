@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { prisma } from '@/prisma';
 import {
 	getIncidents,
 	getPendingIncidents,
@@ -59,11 +60,19 @@ export async function POST(req: Request) {
 
 		// Handle backend video update
 		if (body.action === 'updateVideo' && body.id && body.videoClipUrl) {
-			const { PrismaClient } = await import('@prisma/client');
-			const prisma = new PrismaClient();
 			const updatedIncident = await prisma.incident.update({
 				where: { id: body.id },
 				data: { videoClipUrl: body.videoClipUrl },
+			});
+			return NextResponse.json(updatedIncident, { status: 200 });
+		}
+
+		// Handle backend image update (Cloudinary upload finishes after the
+		// incident is created, so the snapshot URL is patched in afterwards).
+		if (body.action === 'updateImage' && body.id && body.imageUrl) {
+			const updatedIncident = await prisma.incident.update({
+				where: { id: body.id },
+				data: { imageUrl: body.imageUrl },
 			});
 			return NextResponse.json(updatedIncident, { status: 200 });
 		}

@@ -82,7 +82,7 @@ function CameraDetailContent() {
   }, [requestedId]);
 
   const handleMessage = useCallback((event: MessageEvent) => {
-    let msg: any;
+    let msg: { type?: string; frame?: string; accident_type?: string; confidence?: number; incident_id?: string };
     try {
       msg = JSON.parse(event.data);
     } catch {
@@ -90,7 +90,7 @@ function CameraDetailContent() {
     }
     switch (msg.type) {
       case 'frame':
-        setFrame(msg.frame);
+        setFrame(msg.frame ?? null);
         break;
       case 'accident':
         console.log(
@@ -98,7 +98,7 @@ function CameraDetailContent() {
           'color: white; background: red; font-size: 16px; font-weight: bold; padding: 6px; border-radius: 4px;',
           { camName: cctv?.name, camId: cctv?.id, msg }
         );
-        setAccident({ type: msg.accident_type, confidence: msg.confidence });
+        setAccident({ type: msg.accident_type ?? 'Unknown', confidence: msg.confidence ?? 0 });
         toast({
           title: "⚠️ ACCIDENT DETECTED",
           description: `A possible accident has been detected on ${cctv?.name || 'this camera'}.`,
@@ -116,7 +116,7 @@ function CameraDetailContent() {
         );
         toast({
           title: "🚨 INCIDENT RECORDED",
-          description: `Collision registered for ${cctv?.name || 'this camera'}. Incident ID: ${msg.incident_id.slice(-6).toUpperCase()}`,
+          description: `Collision registered for ${cctv?.name || 'this camera'}. Incident ID: ${(msg.incident_id ?? "").slice(-6).toUpperCase()}`,
           variant: "destructive",
           action: (
             <ToastAction altText="Engage View" onClick={() => window.location.href = `/incident/${msg.incident_id}`}>

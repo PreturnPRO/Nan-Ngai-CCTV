@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
 import dynamic from 'next/dynamic';
@@ -25,7 +24,7 @@ interface Incident {
 
 export default function HeatmapsPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   
   // Filters
   const [dateRange, setDateRange] = useState<'Today' | '7 Days' | '30 Days' | 'All Time'>('30 Days');
@@ -98,6 +97,7 @@ export default function HeatmapsPage() {
   }, [filteredIncidents]);
 
   // 2. Hourly Distribution
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- computed for an upcoming hourly chart
   const hourlyData = useMemo(() => {
     const hours = new Array(24).fill(0);
     filteredIncidents.forEach(inc => {
@@ -121,7 +121,7 @@ export default function HeatmapsPage() {
             <span className="text-xs tracking-wider text-[#bec8d2] uppercase font-semibold">Date Range</span>
             <select 
               value={dateRange}
-              onChange={e => setDateRange(e.target.value as any)}
+              onChange={e => setDateRange(e.target.value as 'Today' | '7 Days' | '30 Days' | 'All Time')}
               className="bg-[#2d3449] text-[#dae2fd] text-xs rounded border border-[#88929b] px-2 py-1 outline-none"
             >
               <option>Today</option>
@@ -134,7 +134,7 @@ export default function HeatmapsPage() {
             <span className="text-xs tracking-wider text-[#bec8d2] uppercase font-semibold">Time Period</span>
             <select 
               value={timePeriod}
-              onChange={e => setTimePeriod(e.target.value as any)}
+              onChange={e => setTimePeriod(e.target.value as 'All' | 'Daytime' | 'Nighttime')}
               className="bg-[#2d3449] text-[#dae2fd] text-xs rounded border border-[#88929b] px-2 py-1 outline-none"
             >
               <option>All</option>

@@ -3,9 +3,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { cwd } from 'process';
 import { existsSync } from 'fs';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/prisma';
 
 export async function POST(request: NextRequest) {
 	try {
@@ -42,7 +40,6 @@ export async function POST(request: NextRequest) {
 			hasAccidentVideo = true;
 		}
 
-		const currentDate = new Date().toISOString();
 		const cctv = await prisma.cCTV.create({
 			data: {
 				name,

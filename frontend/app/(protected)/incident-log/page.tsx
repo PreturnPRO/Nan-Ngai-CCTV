@@ -74,7 +74,7 @@ export default function IncidentLogPage() {
       } else {
         toast({ title: 'Failed to update log', variant: 'destructive' });
       }
-    } catch (err) {
+    } catch {
       toast({ title: 'Error updating log', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
@@ -91,7 +91,7 @@ export default function IncidentLogPage() {
       } else {
         toast({ title: 'Failed to delete log', variant: 'destructive' });
       }
-    } catch (err) {
+    } catch {
       toast({ title: 'Error deleting log', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ export default function IncidentLogPage() {
       toast({ title: `${selectedIds.length} logs deleted permanently` });
       setSelectedIds([]);
       fetchLogs();
-    } catch (err) {
+    } catch {
       toast({ title: 'Error deleting some logs', variant: 'destructive' });
     } finally {
       setLoading(false);

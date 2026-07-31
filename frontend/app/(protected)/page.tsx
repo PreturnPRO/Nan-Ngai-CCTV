@@ -4,21 +4,14 @@ import Link from 'next/link';
 import { TopHeader } from '@/components/TopHeader';
 import { Sidebar } from '@/components/Sidebar';
 import { useCamera, CCTV } from '@/contexts/CameraContext';
-import { Video, Eye } from 'lucide-react';
+import { Video, Eye, Pause, Play } from 'lucide-react';
 import { LiveRTSPStream } from '@/components/LiveRTSPStream';
 
-interface Incident {
-  id: string;
-  verificationStatus: string;
-  incidentType: string;
-  confidenceScore: number;
-  detectedAt: string;
-  cctv?: { name: string; sector: string; landmark: string };
-}
 
 function SyncedVideo({ cam }: { cam: CCTV }) {
-  const { getDisplayTime } = useCamera();
+  const { getDisplayTime, pausedCameras, frozenVideos } = useCamera();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const paused = pausedCameras.has(cam.id) || frozenVideos.has(cam.id);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -28,6 +21,13 @@ function SyncedVideo({ cam }: { cam: CCTV }) {
       }
     }
   }, [cam.id, getDisplayTime]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (paused) v.pause();
+    else v.play().catch(() => {});
+  }, [paused]);
 
   return (
     <video
@@ -55,8 +55,14 @@ export default function LiveMonitoringPage() {
     setIsAiEnabled,
     activeCameraId,
     setActiveCameraId,
-    pendingIncidents
+    pendingIncidents,
+    pausedCameras,
+    togglePause,
+    frozenVideos
   } = useCamera();
+
+  // A tile is stopped if manually paused or auto-frozen by a detection.
+  const isStopped = (id: string) => pausedCameras.has(id) || frozenVideos.has(id);
 
   const [showSwapFor, setShowSwapFor] = useState<number | null>(null);
   const getGridCols = () => {
@@ -235,6 +241,27 @@ export default function LiveMonitoringPage() {
                             </button>
                           )}
                         </div>
+
+                        {/* Pause / Resume button (per camera) */}
+                        {cam.accidentVideoUrl && (
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePause(cam.id); }}
+                            className="absolute bottom-2 right-2 z-40 p-1.5 bg-black/70 rounded text-white hover:bg-black/90 transition-colors border border-slate-600"
+                            title={isStopped(cam.id) ? 'Resume video & detection' : 'Pause video & detection'}
+                          >
+                            {isStopped(cam.id)
+                              ? <Play className="w-3.5 h-3.5" />
+                              : <Pause className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+
+                        {/* Paused indicator */}
+                        {isStopped(cam.id) && (
+                          <div className="absolute bottom-2 left-2 z-30 px-2 py-0.5 bg-black/70 rounded flex items-center gap-1">
+                            <Pause className="w-3 h-3 text-[#FFB95F]" />
+                            <span className="text-[#FFB95F] text-[10px] font-mono">PAUSED</span>
+                          </div>
+                        )}
 
                         {/* Hover Engage View (For Alerts) */}
                         {cam.hasActiveAlert && (

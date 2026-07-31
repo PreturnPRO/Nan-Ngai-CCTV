@@ -65,7 +65,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 			// user is only available the first time right after sign in
 			if (user) {
 				token.id = user.id as string;
-				// @ts-ignore
 				token.role = user.role;
 			}
 			return token;

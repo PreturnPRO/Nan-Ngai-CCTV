@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { prisma } from '@/prisma';
+import { Prisma } from '@prisma/client';
 
 export async function PATCH(
 	request: NextRequest,
@@ -77,7 +78,7 @@ export async function PATCH(
 			return NextResponse.json({ error: 'CCTV not found' }, { status: 404 });
 		}
 
-		const updateData: any = { name, rtspUrl, latitude, longitude, status, sector, roadSegment, landmark };
+		const updateData: Prisma.CCTVUpdateInput = { name, rtspUrl, latitude, longitude, status, sector, roadSegment, landmark };
 
 		if (removeExistingVideo) {
 			updateData.accidentVideoUrl = null;
@@ -130,7 +131,7 @@ export async function DELETE(
 			where: { cctvId: id }
 		});
 
-		const deletedCCTV = await prisma.cCTV.delete({
+		await prisma.cCTV.delete({
 			where: { id },
 		});
 		return NextResponse.json({ message: 'Deleted successfully', id });

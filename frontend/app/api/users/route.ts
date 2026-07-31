@@ -3,7 +3,7 @@ import { prisma } from '@/prisma';
 import bcrypt from 'bcryptjs';
 import { auth } from '@/auth';
 
-export async function GET(req: Request) {
+export async function GET() {
   const session = await auth();
   
   if (!session || session.user.role !== 'ADMIN') {
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json(users);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 });
   }
 }
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

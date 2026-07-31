@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { prisma } from '@/prisma';
 import {
 	getIncidentById,
 	verifyIncident,
 	initiateResponse,
 	resolveIncident,
 } from '../../../../services/incidentServices';
-import { VerificationStatus } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,19 +112,25 @@ export async function DELETE(
 		}
 
 		const { id } = await params;
-		
-		const { PrismaClient } = await import('@prisma/client');
-		const prisma = new PrismaClient();
-		
+
+		// Optimistic temp incidents (from live detection) aren't in the DB.
+		if (id.startsWith('temp-')) {
+			return NextResponse.json({ success: true, skipped: 'temp' });
+		}
+
 		await prisma.incident.delete({
 			where: { id }
 		});
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
+		// Already deleted / never existed — treat as success (idempotent).
+		if ((error as { code?: string }).code === 'P2025') {
+			return NextResponse.json({ success: true, alreadyGone: true });
+		}
 		console.error('Error deleting incident:', error);
 		return NextResponse.json(
-			{ error: 'Failed to delete incident' },
+			{ error: 'Failed to delete incident', details: (error as Error).message },
 			{ status: 500 }
 		);
 	}

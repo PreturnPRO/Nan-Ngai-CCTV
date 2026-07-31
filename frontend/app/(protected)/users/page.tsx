@@ -49,7 +49,7 @@ export default function UsersPage() {
         const data = await res.json();
         setUsers(data);
       }
-    } catch (error) {
+    } catch {
       toast({ title: 'Error fetching users', variant: 'destructive' });
     } finally {
       setLoading(false);
@@ -82,7 +82,7 @@ export default function UsersPage() {
         const data = await res.json();
         toast({ title: 'Error', description: data.error, variant: 'destructive' });
       }
-    } catch (error) {
+    } catch {
       toast({ title: 'Error deleting user', variant: 'destructive' });
     }
   };
@@ -94,7 +94,7 @@ export default function UsersPage() {
     const url = isEditing ? `/api/users/${currentUser.id}` : '/api/users';
     const method = isEditing ? 'PATCH' : 'POST';
     
-    const body: any = {
+    const body: { name?: string | null; email?: string; role?: string; password?: string } = {
       name: currentUser.name,
       email: currentUser.email,
       role: currentUser.role,
@@ -116,7 +116,7 @@ export default function UsersPage() {
         const data = await res.json();
         toast({ title: 'Error', description: data.error, variant: 'destructive' });
       }
-    } catch (error) {
+    } catch {
       toast({ title: 'Error saving user', variant: 'destructive' });
     } finally {
       setSaving(false);

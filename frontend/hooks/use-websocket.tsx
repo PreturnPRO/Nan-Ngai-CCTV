@@ -24,7 +24,7 @@ export function useWebSocket(
 	options: UseWebSocketOptions = {}
 ) {
 	const [status, setStatus] = useState<WebSocketStatus>('idle');
-	const [data, setData] = useState<any | null>(null);
+	const [data, setData] = useState<unknown>(null);
 	const socketRef = useRef<WebSocket | null>(null);
 	const reconnectAttemptsRef = useRef(0);
 	const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +47,7 @@ export function useWebSocket(
 	}, [onOpen, onMessage, onClose, onError]);
 
 	const log = useCallback(
-		(message: string, ...args: any[]) => {
+		(message: string, ...args: unknown[]) => {
 			if (debug) {
 				console.log(`[WebSocket] ${message}`, ...args);
 			}
@@ -56,7 +56,7 @@ export function useWebSocket(
 	);
 
 	const warn = useCallback(
-		(message: string, ...args: any[]) => {
+		(message: string, ...args: unknown[]) => {
 			if (debug) {
 				console.warn(`[WebSocket] ${message}`, ...args);
 			}
@@ -64,7 +64,7 @@ export function useWebSocket(
 		[debug]
 	);
 
-	const error = useCallback((message: string, ...args: any[]) => {
+	const error = useCallback((message: string, ...args: unknown[]) => {
 		console.warn(`[WebSocket] ${message}`, ...args);
 	}, []);
 

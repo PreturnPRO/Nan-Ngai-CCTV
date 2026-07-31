@@ -16,7 +16,7 @@ export function LiveRTSPStream({ cam }: { cam: CCTV }) {
         if (data.type === 'frame' && data.frame) {
           setFrame(data.frame);
         }
-      } catch (e) {
+      } catch {
         // ignore parse errors
       }
     }

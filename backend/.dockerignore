@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+accident_images/
+accident_videos/
+accident_clips/
+research/
+logs/
+*.log

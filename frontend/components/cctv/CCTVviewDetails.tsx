@@ -7,8 +7,6 @@ import {
 } from '@/components/ui/dialog';
 import { CCTV } from './types';
 import { Badge } from '@/components/ui/badge';
-import { Film } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
 
 // Import map component with SSR disabled

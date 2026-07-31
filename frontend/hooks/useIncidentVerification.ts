@@ -33,8 +33,8 @@ export function useIncidentVerification(incidentId: string) {
 			router.push('/Pending_Verification');
 			router.refresh();
 			return true;
-		} catch (err: any) {
-			setError(err.message || 'Failed to verify incident');
+		} catch (err) {
+			setError((err instanceof Error ? err.message : null) || 'Failed to verify incident');
 			return false;
 		} finally {
 			setIsLoading(false);
@@ -65,8 +65,8 @@ export function useIncidentVerification(incidentId: string) {
 			// Successfully initiated response
 			router.refresh();
 			return true;
-		} catch (err: any) {
-			setError(err.message || 'Failed to initiate response');
+		} catch (err) {
+			setError((err instanceof Error ? err.message : null) || 'Failed to initiate response');
 			return false;
 		} finally {
 			setIsLoading(false);
@@ -101,8 +101,8 @@ export function useIncidentVerification(incidentId: string) {
 			// Successfully resolved
 			router.refresh();
 			return true;
-		} catch (err: any) {
-			setError(err.message || 'Failed to resolve incident');
+		} catch (err) {
+			setError((err instanceof Error ? err.message : null) || 'Failed to resolve incident');
 			return false;
 		} finally {
 			setIsLoading(false);

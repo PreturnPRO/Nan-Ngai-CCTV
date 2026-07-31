@@ -20,3 +20,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# large media — served from Cloudinary / generated at runtime, not committed
+*.zip
+frontend/videos/*.mp4
+frontend/public/uploads/*.mp4
+frontend/public/accident_images/*.jpg
+frontend/public/accident_videos/*.mp4
